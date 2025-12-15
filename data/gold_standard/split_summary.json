@@ -1,0 +1,8 @@
+{
+  "gold_count": 2,
+  "silver_count": 11,
+  "excluded_count": 2,
+  "total_count": 15,
+  "source": "raw_lawyer_annotations",
+  "derivation_rule": "Hallucination = Incorrect AND (Ungrounded OR Misgrounded)"
+}

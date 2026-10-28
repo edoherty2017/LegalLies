@@ -1,8 +1,21 @@
 # RAG Hallucination Detection Architecture
 
-**Purpose**: Detect grounding failures in retrieval-augmented generation outputs.
+> ### WARNING - Implementation note (2026-10)
+> **Code examples below do not run as written.** They reference
+> `result.epistemic_context`, `GenerationMode` and `EpistemicContext`, none of which
+> exist: `FactualityResult` has no `epistemic_context` attribute, and the two config
+> types were never wired into the detector and have been removed.
+>
+> What ships: `RAGHallucinationDetector` is a thin wrapper that passes your
+> `retrieved_context` to `FactualityDetector` and returns a `FactualityResult`. It
+> applies no closed-world logic - detection is symmetric across generation modes.
+> See the README section "One Detector, Two Convenience Wrappers".
 
-**Epistemic Assumption**: Closed-world - model should ONLY use retrieved evidence.
+**Purpose**: Verify RAG output claims against the evidence supplied by the caller.
+
+**Epistemic Assumption**: Symmetric - claims are checked against the oracle corpus
+on the same terms as every other mode. (The closed-world framing below was a design
+intent, never implemented.)
 
 ---
 

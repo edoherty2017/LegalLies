@@ -63,11 +63,27 @@ variant pairs:
 | RAG vs RAG + Steering           | 0.445   | no                    |
 | Steering vs RAG + Steering      | 0.796   | no                    |
 
-**None reach significance.** The 95% confidence intervals above overlap
-substantially. Moreover, this test treats each claim as an independent
-observation, but claims are nested within only 15 questions per variant; properly
-accounting for that clustering would *widen* the intervals further. The observed
-ordering is therefore **not distinguishable from sampling noise**.
+That test pools claims and treats each as independent, although claims are nested
+within only 15 questions. Because the design is **paired** (all four variants
+answered the same 15 questions), we also ran per-question paired tests, which
+respect the design and can be *more* sensitive than pooling:
+
+| Comparison                      | sign test | Wilcoxon (exact) | usable n |
+|---------------------------------|-----------|------------------|----------|
+| Baseline vs RAG                 | 1.000     | 0.578            | 12       |
+| Baseline vs Steering            | 0.727     | 0.445            | 13       |
+| Baseline vs RAG + Steering      | 0.289     | 0.188            | 12       |
+| RAG vs Steering                 | 1.000     | 1.000            | 12       |
+| RAG vs RAG + Steering           | 1.000     | 0.750            | 12       |
+| Steering vs RAG + Steering      | 0.453     | 0.656            | 12       |
+
+(A question is dropped from a pair when either side yielded zero testable claims,
+which is why n < 15.)
+
+**Nothing reaches significance under either test** — pooled or paired. The 95%
+confidence intervals above overlap substantially, and the smallest p-value across
+all twelve tests is 0.188. The observed variant ordering is **not distinguishable
+from sampling noise**.
 
 **What can and cannot be said**
 - ✔ The detector runs end-to-end and produces claim-level verdicts with explicit
@@ -80,7 +96,7 @@ ordering is therefore **not distinguishable from sampling noise**.
   contradiction-only definition.
 - ✘ **Not supported**: that activation steering reduces contradictions. The
   numerically lowest rate (Steering, 89.6%) is not significantly below Baseline
-  (95.9%), p=0.193.
+  (95.9%): pooled p=0.193, paired Wilcoxon p=0.445.
 - ✘ **Not supported**: that RAG helps, or that RAG + Steering interact
   non-additively. Both comparisons are well short of significance.
 

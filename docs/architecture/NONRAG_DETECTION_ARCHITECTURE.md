@@ -1,8 +1,24 @@
 # Non-RAG Hallucination Detection Architecture
 
-**Purpose**: Detect parametric failures in pure generation without retrieval.
+> ### WARNING - Implementation note (2026-10)
+> **Code examples below do not run as written.** They reference
+> `result.epistemic_context`, `GenerationMode` and `EpistemicContext`, none of which
+> exist: `FactualityResult` has no `epistemic_context` attribute, and the two config
+> types were never wired into the detector and have been removed.
+>
+> What ships: `NonRAGHallucinationDetector` is a thin wrapper that calls
+> `FactualityDetector` with `evidence=None`, which triggers auto-retrieval from the
+> oracle corpus. **This detector is not reference-free** - it verifies against
+> retrieved evidence, exactly like the RAG path. No self-consistency or
+> semantic-entropy detector exists in this repository.
+> See the README section "One Detector, Two Convenience Wrappers".
 
-**Epistemic Assumption**: Open-world - model uses parametric knowledge from training.
+**Purpose**: Verify claims from parametric (no-retrieval) *generation* by retrieving
+evidence post-hoc. Note the asymmetry: generation used no retrieval; detection does.
+
+**Epistemic Assumption**: Symmetric at detection time - claims are checked against
+the oracle corpus on the same terms as every other mode. (The open-world framing
+below was a design intent, never implemented.)
 
 ---
 

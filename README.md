@@ -88,12 +88,10 @@ from sampling noise**.
 **What can and cannot be said**
 - ✔ The detector runs end-to-end and produces claim-level verdicts with explicit
   testability accounting.
-- ✔ Testability is low (31–38%) across all variants: most generated legal claims
-  could not be adjudicated against the oracle corpus at all. This is itself a
-  substantive result about corpus coverage.
-- ✔ Hallucination rates among adjudicable claims are high (≈90–96%) for every
-  variant, reflecting adversarial question difficulty under a conservative
-  contradiction-only definition.
+- ~ Testability is low (31–38%) and hallucination rates among adjudicable claims
+  are high (≈90–96%) across all variants. Treat both as **order-of-magnitude
+  observations, not measurements** — see *Known scoring defects* below, which push
+  testability down and the hallucination rate up by unquantified amounts.
 - ✘ **Not supported**: that activation steering reduces contradictions. The
   numerically lowest rate (Steering, 89.6%) is not significantly below Baseline
   (95.9%): pooled p=0.193, paired Wilcoxon p=0.445.
@@ -101,6 +99,44 @@ from sampling noise**.
   non-additively. Both comparisons are well short of significance.
 
 Establishing any of the ✘ claims requires a substantially larger question set.
+
+### Known scoring defects (external review, 2026-10)
+
+An independent review of the detection code found defects that affect the numbers
+above. They are **not** fixed in this revision, and the table has not been
+regenerated. Anyone citing these results should know:
+
+1. **RAG and non-RAG are graded against different evidence.**
+   `RAGHallucinationDetector` passes the model's own retrieved context as the
+   evidence set, and `FactualityDetector` auto-retrieves from the oracle corpus
+   *only when evidence is empty* — so RAG answers are never checked against the
+   corpus. A RAG answer faithfully repeating an incorrect retrieved passage scores
+   SUPPORTED, while the same claim from a baseline model is checked against the
+   corpus and can score CONTRADICTED. **The RAG and non-RAG columns are therefore
+   not directly comparable**, independently of the sample-size problem above.
+2. **Citations are split into fragments.** In `claim_decomposer.py`, `"U.S."` is
+   protected before `"U.S.C."`, so every U.S. Code citation splits mid-claim
+   (`"Under 42 U.S.C. § 1983, ..."` → two "claims"). `S. Ct.`, `F. Supp.`, `No.`
+   and `e.g.` are unprotected. Compound-sentence splitting also fires on ordinary
+   noun coordination (`"the landlord and the tenant"`). Fragments are not
+   propositions, so they return UNSUPPORTED — **inflating claim counts and
+   depressing testability**.
+3. **Any single contradiction wins.** Evidence is retrieved once per *answer*, not
+   per claim, and a claim is marked CONTRADICTED if any one of the top-k passages
+   contradicts it, even when another entails it — **inflating the hallucination
+   rate**.
+4. **Silent degradation.** If the NLI model, retriever or index fails to load, the
+   failure is caught and logged; every claim then becomes UNSUPPORTED and the run
+   reports a 0% hallucination rate. Check testability before trusting any rate.
+5. **Authority re-ranking is inert.** The citation graph is keyed by document ID
+   but looked up by corpus row index, so it never hits; unknown documents also
+   receive *negative* authority scores. The 0.7/0.3 hybrid weighting described in
+   the retrieval docs is not in effect.
+
+Full detail: https://github.com/edoherty2017/LegalLies/pull/2#issuecomment-6474446377
+
+Correcting 1–3 changes the reported numbers, so the table cannot be treated as
+final until the evaluation is re-run.
 
 ---
 

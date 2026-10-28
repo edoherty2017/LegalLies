@@ -270,18 +270,26 @@ class EntailmentVerifier:
                 "error": "Claim too short or empty",
             }
 
-        results = []
-        entailment_count = 0
-        contradiction_count = 0
+        # One batched forward pass over all (claim, source) pairs instead of one
+        # call per source. The sequential path issued a separate model.predict
+        # for every passage, so a 60-answer run made thousands of unbatched
+        # forward passes - the dominant cost on CPU - while verify_batch, which
+        # already existed and is documented as a 10-20x speedup, went unused.
+        #
+        # This changes speed only, not verdicts: the batched path applies the
+        # same truncation (1500 source / 500 claim chars), the same
+        # [CONTRADICTION, ENTAILMENT, NEUTRAL] mapping and the same thresholds,
+        # and softmax is computed per row, so each pair scores exactly as it
+        # would alone.
+        results = self.verify_batch([(claim, source) for source in source_documents])
 
-        for source in source_documents:
-            result = self.verify_claim(claim, source)
-            results.append(result)
+        if not results:
+            # No model, or nothing to score: fall back to the sequential path so
+            # behaviour is unchanged in that case.
+            results = [self.verify_claim(claim, source) for source in source_documents]
 
-            if result.is_supported:
-                entailment_count += 1
-            if result.is_contradicted:
-                contradiction_count += 1
+        entailment_count = sum(1 for r in results if r.is_supported)
+        contradiction_count = sum(1 for r in results if r.is_contradicted)
 
         # Determine overall status.
         #
@@ -381,8 +389,17 @@ class EntailmentVerifier:
                 else:
                     label = EntailmentLabel.NEUTRAL
                     confidence = neutral_score
+            elif len(scores) == 2:
+                # 2-class QNLI model - same handling as verify_claim
+                entailment_score = float(scores[1])
+                if entailment_score >= self.entailment_threshold:
+                    label = EntailmentLabel.ENTAILMENT
+                    confidence = entailment_score
+                else:
+                    label = EntailmentLabel.NEUTRAL
+                    confidence = 1.0 - entailment_score
             else:
-                # Fallback for 2-class or unexpected outputs
+                # Fallback for unexpected array sizes - same as verify_claim
                 label = EntailmentLabel.NEUTRAL
                 confidence = 0.5
 

@@ -6,7 +6,7 @@ This repository **does not generate answers**. It evaluates factual correctness 
 
 ---
 
-## Current Research Focus (Dec 2025)
+## Research Focus
 
 **Evaluating the interaction between Retrieval-Augmented Generation (RAG) and Activation Steering under a unified, correctness-only hallucination definition.**
 
@@ -18,26 +18,96 @@ Key goals:
 
 ---
 
-## Final Evaluation Results (Threshold-Enforced)
+## Evaluation Results
 
-All results below are computed using:
+**Pilot scale: 15 questions per variant**, the same 15 adversarial legal
+questions for all four. Generation is held fixed; the answers are stored in
+`data/evaluation_results.csv` and re-scored from there.
+
+All results are computed using:
+
 - Claim-level decomposition
-- Reference-based NLI verification
-- Confidence thresholding (low-confidence → UNSUPPORTED)
-- Conditional hallucination rate over adjudicable claims only
+- NLI verification against the fixed oracle corpus, identically for every variant
+- Confidence thresholding (low-confidence becomes UNSUPPORTED)
+- Conditional hallucination rate over adjudicable claims only, pooled as
+  `sum(contradicted) / sum(testable)` across answers
 
-| Variant        | Claims | Testable | Testability | Hallucination Rate |
-|----------------|--------|----------|-------------|--------------------|
-| Baseline       | 196    | 74       | 37.8%       | 95.9%              |
-| RAG            | 318    | 100      | 31.4%       | 94.0%              |
-| Steering       | 201    | 67       | 33.3%       | **89.6%**          |
-| RAG + Steering | 334    | 110      | 32.9%       | 90.9%              |
+| Variant        | Questions | Claims | Testable | Testability | Hallucination Rate | 95% CI (Wilson) |
+|----------------|-----------|--------|----------|-------------|--------------------|-----------------|
+| Baseline       | 15        | 186    | 89       | 47.8%       | 83.1%              | 74.0% - 89.5%   |
+| RAG            | 15        | 301    | 163      | 54.2%       | 92.6%              | 87.6% - 95.7%   |
+| Steering       | 15        | 203    | 79       | 38.9%       | 91.1%              | 82.8% - 95.6%   |
+| RAG + Steering | 15        | 326    | 183      | 56.1%       | 92.9%              | 88.2% - 95.8%   |
 
-**Key Findings**
-- Activation steering produces the largest reduction in factual contradictions.
-- RAG alone yields marginal improvement in this setting.
-- RAG + Steering does not exhibit additive synergy, suggesting interaction effects between retrieval context and behavioral control.
-- High hallucination rates reflect the difficulty of adversarial legal questions under conservative evaluation, not detector aggressiveness.
+Reproduce with no third-party dependencies:
+
+```bash
+python3 scripts/verify_reported_results.py                           # tables, CIs, significance
+python3 scripts/rescore_stored_answers.py --out data/rescored.csv    # re-score stored answers
+```
+
+### Does any variant beat another? No.
+
+Two tests, because they answer different questions. Pooled Fisher exact treats
+each claim as an independent observation; the paired tests respect the fact that
+all four variants answered the same 15 questions, and are the appropriate test
+for this design.
+
+| Comparison                 | Fisher (pooled claims) | Sign test (paired) | Wilcoxon (paired, exact) |
+|----------------------------|------------------------|--------------------|--------------------------|
+| Baseline vs RAG            | 0.031                  | 0.774              | 0.197                    |
+| Baseline vs Steering       | 0.169                  | 0.070              | 0.195                    |
+| Baseline vs RAG + Steering | 0.019                  | 0.344              | 0.160                    |
+| RAG vs Steering            | 0.799                  | 0.344              | 0.740                    |
+| RAG vs RAG + Steering      | 1.000                  | 1.000              | 0.685                    |
+| Steering vs RAG + Steering | 0.619                  | 0.508              | 0.883                    |
+
+**Nothing is significant under the paired tests.** The two pooled Fisher results
+below 0.05 should not be cited as findings: with a thousand-odd claims nested in
+only 15 questions, treating claims as independent overstates the evidence, which
+is exactly what the paired tests correct for.
+
+**What can be said**
+
+- The detector runs end-to-end and produces claim-level verdicts with explicit
+  testability accounting.
+- Fewer than 60% of generated legal claims can be adjudicated against the oracle
+  corpus at all (testability 38.9-56.1%). Corpus coverage, not model quality, is
+  the binding constraint on this kind of evaluation.
+- Among adjudicable claims, every variant is wrong most of the time (83-93%) on
+  adversarial questions under a contradiction-only definition.
+
+**What cannot be said**
+
+- That activation steering reduces contradictions. It does not: Steering (91.1%)
+  scores numerically *worse* than Baseline (83.1%), and the difference is not
+  significant (paired sign test p=0.070, Wilcoxon p=0.195). The sign is the
+  opposite of what an earlier revision of this README claimed.
+- That RAG helps, or that RAG and steering interact. No paired comparison comes
+  close to significance.
+
+Separating these variants at these effect sizes needs a substantially larger
+question set, which means re-running generation, not re-scoring.
+
+### A note on reproducibility
+
+These figures come from re-scoring the stored answers with the corrected
+detector (see *Scoring corrections* below). An earlier revision of this README
+reported 95.9 / 94.0 / 89.6 / 90.9% from the original December 2025 run.
+
+Those older figures are not directly comparable, for two reasons. The detector
+was wrong in ways that moved the numbers. And the environment moved too: this
+project pins `transformers ^4.30` but current installs resolve to 5.x, and NLI
+verdicts shift between those versions - per-answer verdicts move substantially
+even when the decomposed claim text is byte-identical.
+
+So the comparison that is actually controlled is old detector versus new
+detector *within one environment*. Running the pre-fix detector in this
+environment reproduces every Baseline and Steering claim count exactly (30 of 30
+answers) at 91.8% and 90.0%, which is what establishes that the harness is
+faithful and that the differences above come from the detector changes rather
+than the library upgrade. Both runs, and the full comparison, are in
+[`docs/experiments/rescore-2026-10-28.md`](docs/experiments/rescore-2026-10-28.md).
 
 ---
 
@@ -62,47 +132,70 @@ Unsupported claims are **excluded** from the denominator and reported separately
 
 ## Detection Architecture (Claim-Level)
 
-The detector operates through layered verification stages:
+`FactualityDetector` runs four stages:
 
-1. **Structural Verification**  
-   Citation format validation, reporter checks, and existence verification.
+1. **Claim Decomposition** — legal-aware segmentation into atomic factual
+   claims, via spaCy with legal abbreviation exceptions so citations are not
+   split mid-claim (`preprocessing/claim_decomposer.py`,
+   `preprocessing/legal_segmenter.py`).
 
-2. **Claim Decomposition**  
-   Legal-aware segmentation into atomic factual claims.
+2. **Per-Claim Evidence Retrieval** — hybrid BM25 + dense retrieval from the
+   fixed oracle corpus, run once per claim
+   (`retrieval/document_retriever.py`).
 
-3. **Semantic Grounding (Bi-Encoder)**  
-   Fast relevance filtering using legal-domain embeddings.
+3. **NLI Entailment Verification** — cross-encoder classification into
+   SUPPORTED / CONTRADICTED / UNSUPPORTED, batched per claim
+   (`detection/entailment_verifier.py`).
 
-4. **NLI Entailment Verification**  
-   Cross-encoder classification into SUPPORTED / CONTRADICTED / UNSUPPORTED.
+4. **Calibration & Aggregation** — confidence thresholding, testability
+   tracking, and metric aggregation.
 
-5. **Calibration & Aggregation**  
-   Confidence thresholding, testability tracking, and metric aggregation.
+Structural citation verification and bi-encoder semantic matching were
+prototyped but are not part of the pipeline; they remain in
+`src/detection/_archived/` and contribute to no reported number.
 
 ---
 
-## Three Detection Pipelines (Epistemically Explicit)
+## One Detector, Two Wrappers
 
-This system provides three detectors, each tied to a specific epistemic assumption.
+There is a single detection method. `FactualityDetector` verifies every claim
+against the fixed oracle corpus and labels it SUPPORTED / CONTRADICTED /
+UNSUPPORTED. RAG and non-RAG outputs are judged by **identical factual
+criteria** — that symmetry is what makes the variants comparable.
 
-### 1. NonRAGHallucinationDetector
-- **Use case**: Baseline / parametric LLMs
-- **Assumption**: Open-world (parametric knowledge)
-- **Grounding**: Not required
-- **Hallucination**: Contradiction with authoritative law
+| Wrapper | Evidence used | For |
+|---|---|---|
+| `NonRAGHallucinationDetector` | oracle corpus, retrieved per claim | baseline / parametric output |
+| `RAGHallucinationDetector` | oracle corpus by default; the supplied context with `grade_against="context"` | RAG output |
 
-### 2. RAGHallucinationDetector
-- **Use case**: Retrieval-augmented systems
-- **Assumption**: Closed-world (retrieved evidence)
-- **Grounding**: Applicable
-- **Hallucination**: Contradiction with law (correctness-only metric)
+`UnifiedHallucinationDetector` is a backwards-compatibility alias for
+`FactualityDetector`, not a third pipeline.
 
-### 3. UnifiedHallucinationDetector
-- **Use case**: Production or mixed pipelines
-- **Assumption**: Explicitly provided or inferred
-- **Warnings**: Issued when epistemic mode is ambiguous
+The RAG wrapper's default matters. Grading RAG answers against the passages the
+generator was shown measures *faithfulness* — whether the answer follows from
+those passages — which is a different question from whether the claim is true,
+and is not comparable with a baseline graded against the corpus. Both are
+available; only the corpus default is comparable across variants.
 
-For academically rigorous evaluation, **use the mode-specific detectors**.
+Non-RAG detection is **not reference-free**: it retrieves evidence post-hoc to
+approximate what the model should have known. Self-consistency and
+semantic-entropy methods are not implemented here.
+
+## Scoring corrections
+
+The detector was audited in October 2026 and several defects that moved the
+reported numbers were fixed. Briefly: citations such as `42 U.S.C. § 1983` were
+split into fragments that were then counted as claims; evidence was retrieved
+once per answer and reused for every claim; a single contradicting passage
+outvoted passages that supported the claim; RAG answers were graded against
+their own retrieved context rather than the corpus; an answer with nothing
+testable reported a 0% hallucination rate rather than an undefined one; and
+component load failures were swallowed, so a broken environment produced a clean
+0%. The citation graph built almost no edges, leaving authority re-ranking inert.
+
+Each fix is a separate commit with its reasoning, and the resulting change in
+every number is recorded in
+[`docs/experiments/rescore-2026-10-28.md`](docs/experiments/rescore-2026-10-28.md).
 
 ---
 
@@ -129,12 +222,18 @@ python -m spacy download en_core_web_sm
 
 ## Intended Use
 
-✔ Research evaluation of legal LLM outputs  
-✔ Fair comparison of RAG vs non-RAG systems  
-✔ Hallucination analysis under conservative definitions  
+Suitable for:
 
-✘ Not an answer generator  
-✘ Not a legal advice system  
+- Research evaluation of legal LLM outputs
+- Comparison of RAG vs non-RAG systems under identical criteria
+- Hallucination analysis under conservative definitions
+
+Not suitable for:
+
+- Generating answers; this repository evaluates them
+- Legal advice
+- Established claims about RAG or steering effectiveness: at 15 questions, no
+  variant difference is statistically significant
 
 ---
 

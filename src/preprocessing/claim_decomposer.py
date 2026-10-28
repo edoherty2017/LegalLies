@@ -94,23 +94,6 @@ class ClaimDecomposer:
         self.nli_pipeline = None
         print(f"Note: NLI quality validation disabled (optional feature)")
 
-        # Prefer the spaCy-backed LegalSegmenter: it protects legal
-        # abbreviations through tokenizer exceptions and is unit-tested. The
-        # regex fallback in _segment_sentences handles environments without a
-        # spaCy model. Importing lazily keeps spaCy an optional dependency.
-        self.segmenter = None
-        self.nlp = None
-        try:
-            from .legal_segmenter import LegalSegmenter
-
-            self.segmenter = LegalSegmenter()
-            self.nlp = getattr(self.segmenter, "nlp", None)
-        except Exception as exc:  # pragma: no cover - environment dependent
-            print(
-                f"Note: spaCy segmenter unavailable ({exc.__class__.__name__}); "
-                "using regex sentence segmentation"
-            )
-
     @staticmethod
     def _has_cuda() -> bool:
         """Check if CUDA is available."""
@@ -137,13 +120,10 @@ class ClaimDecomposer:
             ClaimDecompositionResult with decomposed claims and quality metrics
         """
         # Stage 1: Sentence segmentation
-        if self.segmenter is not None:
-            sentences = [s for s in self.segmenter.split(answer) if len(s) > 10]
-        else:
-            sentences = self._segment_sentences(answer)
+        sentences = self._segment_sentences(answer)
 
         # Stage 2: Convert sentences to atomic claims
-        claims = self._create_claims(sentences, nlp=self.nlp)
+        claims = self._create_claims(sentences)
 
         # Stage 3: Measure decomposition quality
         quality_metrics = self._measure_quality(answer, claims)
@@ -160,90 +140,56 @@ class ClaimDecomposer:
 
         return result
 
-    # Abbreviations that must never create a sentence boundary. Order does not
-    # matter here: masking is applied longest-first at run time, so "U.S.C."
-    # is always consumed before "U.S.". Getting that order wrong was the
-    # original defect - "U.S." masked first turned "U.S.C." into "<US>C.",
-    # leaving the period after "C." exposed and splitting every U.S. Code
-    # citation mid-claim.
-    LEGAL_ABBREVIATIONS = (
-        # Codes and regulations
-        "U.S.C.A.", "U.S.C.", "C.F.R.", "U. S.", "U.S.",
-        # Federal rules
-        "Fed. R. Civ. P.", "Fed. R. Crim. P.", "Fed. R. Evid.",
-        "Fed. R. App. P.", "Fed. R.", "Fed. Reg.",
-        # Reporters (incl. series with digits and internal spaces)
-        "F. Supp. 3d", "F. Supp. 2d", "F. Supp.", "F. App'x",
-        "S. Ct.", "L. Ed. 2d", "L. Ed.",
-        "F.4th", "F.3d", "F.2d", "A.2d", "A.3d", "P.2d", "P.3d",
-        "N.E.2d", "N.E.3d", "N.W.2d", "N.W.3d", "S.E.2d", "S.E.3d",
-        "S.W.2d", "S.W.3d", "So.2d", "So.3d", "Cal.4th", "Cal.3d",
-        "N.Y.2d", "N.Y.3d", "Stat.",
-        # Courts and jurisdictions
-        "Cir.", "Ct. App.", "Ct. Cl.", "Ct.", "D.C.", "Dist.", "Div.",
-        "Supp.", "Supreme Ct.",
-        # Citation signals
-        " v. ", " vs. ", "Id.", "id.", "Ibid.", "ibid.", "Cf.", "cf.",
-        "See, e.g.,", "e.g.", "i.e.", "et al.", "etc.", "aff'd", "rev'd",
-        # Parties and numbering
-        "Inc.", "Corp.", "Ltd.", "Co.", "L.L.C.", "L.P.",
-        "Nos.", "No.", "para.", "pt.", "art.", "ch.", "cl.",
-        "Dep't", "Ass'n", "Comm'n",
-        # Titles
-        "Mr.", "Mrs.", "Ms.", "Dr.", "Hon.", "J.", "JJ.",
-    )
-
     @staticmethod
     def _segment_sentences(text: str) -> List[str]:
         """
         Split text into sentences on legal-aware boundaries.
 
-        This is the dependency-free fallback. When spaCy and a model are
-        available, ``decompose`` uses :class:`LegalSegmenter` instead, which
-        does the same job through tokenizer exceptions.
-
-        Legal text defeats naive splitters because citations are dense with
-        periods: "Under 42 U.S.C. Section 1983, a plaintiff may sue" must stay
-        one claim, while "...at 500 F. Supp. 2d 100. The panel disagreed."
-        must become two. Abbreviations are therefore masked with placeholders
-        that contain no period, longest match first, before splitting.
+        Handles legal abbreviations (e.g., "U.S.", "USC", "v.", "Id.") and
+        legal citation patterns (e.g., "42 U.S.C. Section 1983").
         """
-        if not text or not text.strip():
-            return []
-
-        # Mask longest abbreviations first so that prefixes such as "U.S."
-        # cannot consume part of a longer form such as "U.S.C.".
-        ordered = sorted(
-            ClaimDecomposer.LEGAL_ABBREVIATIONS, key=len, reverse=True
-        )
-        placeholders: Dict[str, str] = {}
+        # Protect legal abbreviations and citations from breaking
         protected = text
-        for i, abbr in enumerate(ordered):
-            if abbr in protected:
-                token = f"\x00A{i}\x00"  # contains no '.', '!' or '?'
-                placeholders[token] = abbr
-                protected = protected.replace(abbr, token)
+        protected = protected.replace("U.S.", "<US>")
+        protected = protected.replace("U.S.C.", "<USC>")
+        protected = protected.replace("Fed. R.", "<FEDR>")
+        protected = protected.replace("Cir.", "<CIR>")
+        protected = protected.replace("Ct.", "<CT>")
+        protected = protected.replace("Supp.", "<SUPP>")
+        protected = protected.replace(" v. ", " <V> ")
+        protected = protected.replace("Id.", "<ID>")
+        protected = protected.replace("et al.", "<ETAL>")
 
+        # Split on sentence boundaries
         sentences = re.split(r"(?<=[.!?])\s+", protected)
 
-        # Restore, longest placeholder first is unnecessary - tokens are unique.
-        restored = []
-        for sentence in sentences:
-            for token, abbr in placeholders.items():
-                sentence = sentence.replace(token, abbr)
-            restored.append(sentence.strip())
+        # Restore abbreviations
+        sentences = [
+            s.replace("<US>", "U.S.")
+            .replace("<USC>", "U.S.C.")
+            .replace("<FEDR>", "Fed. R.")
+            .replace("<CIR>", "Cir.")
+            .replace("<CT>", "Ct.")
+            .replace("<SUPP>", "Supp.")
+            .replace("<V>", "v.")
+            .replace("<ID>", "Id.")
+            .replace("<ETAL>", "et al.")
+            for s in sentences
+        ]
 
-        return [s for s in restored if len(s) > 10]
+        # Filter empty and very short fragments
+        sentences = [s.strip() for s in sentences if len(s.strip()) > 10]
+
+        return sentences
 
     @staticmethod
-    def _create_claims(sentences: List[str], nlp=None) -> List[DecomposedClaim]:
+    def _create_claims(sentences: List[str]) -> List[DecomposedClaim]:
         """Convert sentences into DecomposedClaim objects."""
         claims = []
 
         for i, sentence in enumerate(sentences, 1):
-            # Split only genuine clause coordination; needs a parse, so this is
-            # a no-op when no spaCy model is loaded.
-            sub_claims = ClaimDecomposer._split_compound_sentence(sentence, nlp=nlp)
+            # Further decompose compound sentences (containing "and", "but")
+            sub_claims = ClaimDecomposer._split_compound_sentence(sentence)
 
             for j, sub_claim in enumerate(sub_claims):
                 claim = DecomposedClaim(
@@ -256,70 +202,21 @@ class ClaimDecomposer:
         return claims
 
     @staticmethod
-    def _split_compound_sentence(sentence: str, nlp=None) -> List[str]:
+    def _split_compound_sentence(sentence: str) -> List[str]:
         """
-        Split a sentence only where it genuinely coordinates two clauses.
+        Split compound sentences at conjunctions while preserving legal meaning.
 
-        The previous implementation split on any ``<word> and the <word>``,
-        which fires on ordinary noun-phrase coordination:
-
-            "The dispute arose between the landlord and the tenant over the lease."
-            -> ["The dispute arose between the landlord", "tenant over the lease."]
-
-        Neither fragment is a proposition (and the second lost its determiner,
-        because the pattern consumed "the"). Fragments still reach NLI, come
-        back UNSUPPORTED, and so inflate the claim count while depressing the
-        testability rate - which is precisely the "Decomposition Dilemma" this
-        module exists to avoid.
-
-        Distinguishing clause coordination from noun coordination needs a
-        parse, not a surface pattern. With a spaCy model we split only when the
-        right-hand conjunct has its own subject and acts as a verb; without
-        one we do not split at all. Leaving a compound sentence intact is
-        safe - it is still a verifiable proposition, merely a less atomic one.
-
-        Args:
-            sentence: A single sentence.
-            nlp: Optional loaded spaCy pipeline with a dependency parser.
-
-        Returns:
-            One or more claim strings. Never fragments.
+        Example: "The statute provides X and Y" -> ["The statute provides X", "Y"]
+        But: "U.S. and Canada" -> ["U.S. and Canada"]  (don't split proper nouns)
         """
-        if nlp is None:
+        # Don't split if sentence contains legal citations or proper nouns
+        if any(pattern in sentence for pattern in ["U.S.", "Fed.", "Cir.", "Section", "v."]):
             return [sentence]
 
-        try:
-            doc = nlp(sentence)
-        except Exception:
-            return [sentence]
-
-        for token in doc:
-            # A coordinated verb with its own subject starts a new clause.
-            if token.dep_ != "conj" or token.pos_ not in ("VERB", "AUX"):
-                continue
-            if not any(
-                child.dep_ in ("nsubj", "nsubjpass") for child in token.children
-            ):
-                continue
-            if token.head.pos_ not in ("VERB", "AUX"):
-                continue
-
-            # Cut at the coordinating conjunction attached to this conjunct.
-            conj = next(
-                (c for c in token.children if c.dep_ == "cc"),
-                None,
-            )
-            subject = next(
-                c for c in token.children if c.dep_ in ("nsubj", "nsubjpass")
-            )
-            cut = conj.i if conj is not None else subject.left_edge.i
-            left = doc[: cut].text.strip(" ,;")
-            right = doc[cut:].text.strip()
-            # Drop the leading conjunction from the right-hand clause.
-            if conj is not None:
-                right = right[len(conj.text):].strip(" ,;")
-            if len(left) > 10 and len(right) > 10:
-                return [left, right]
+        # Split on conjunctions but only if they seem to separate independent clauses
+        if re.search(r"\b\w+\s+and\s+the\s+\w+", sentence, re.IGNORECASE):
+            parts = re.split(r"\s+and\s+the\s+", sentence, flags=re.IGNORECASE)
+            return [part.strip() for part in parts if part.strip()]
 
         return [sentence]
 

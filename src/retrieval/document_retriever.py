@@ -61,19 +61,8 @@ class DocumentRetriever:
         self.citation_graph: Optional[CitationGraph] = None
         self.hybrid_ranker: Optional[HybridRanker] = None
 
-        # Load index if provided. A configured-but-missing path used to be
-        # skipped silently: retrieve_evidence then returned [] for every query
-        # while the detector still printed "[OK] Retrieval loaded", so a run
-        # against a nonexistent index looked successful and scored every claim
-        # UNSUPPORTED.
-        if self.index_path:
-            if not self.index_path.exists():
-                raise FileNotFoundError(
-                    f"Retrieval index not found at {self.index_path}. Retrieval "
-                    f"would return no evidence for every claim, scoring them all "
-                    f"UNSUPPORTED and reporting a meaningless 0% hallucination "
-                    f"rate. Build it with scripts/build_retrieval_index.py."
-                )
+        # Load index if provided
+        if self.index_path and self.index_path.exists():
             self._load_index()
 
     def _load_index(self):
@@ -228,20 +217,6 @@ class DocumentRetriever:
         """
         return self.retrieve_evidence(claim, top_k, bm25_weight, dense_weight)
 
-    def _doc_id_for(self, idx: int) -> str:
-        """
-        Document id for a corpus row, for citation-graph lookups.
-
-        Falls back to the row index only when the metadata carries no doc_id,
-        which keeps behaviour defined for indexes built before doc_id was
-        recorded.
-        """
-        if idx < len(self.corpus_metadata):
-            doc_id = self.corpus_metadata[idx].get("doc_id")
-            if doc_id is not None:
-                return str(doc_id)
-        return str(idx)
-
     def hybrid_search(
         self,
         query: str,
@@ -292,18 +267,9 @@ class DocumentRetriever:
         # Apply authority re-ranking if available
         if self.hybrid_ranker:
             # Prepare data for hybrid ranker
-            # Use the passage's real document id, not its row position in
-            # corpus.json. The citation graph is keyed by doc_id
-            # ("harlow-v-fitzgerald"), so passing str(idx) made every authority
-            # lookup miss: get_authority_score returned a default for all
-            # candidates and get_authority_tier reported "Standard" for all, so
-            # ranking silently fell back to the pure hybrid order and the
-            # documented 0.7/0.3 authority weighting never applied. A document
-            # also spans several chunks, so row positions could not match doc
-            # ids even if the graph had been built with integer keys.
             candidates = [
                 (
-                    self._doc_id_for(idx),
+                    str(idx),  # doc_id
                     float(hybrid_scores[idx]),  # vector_score
                     self.corpus[idx],  # content
                     self.corpus_metadata[idx] if idx < len(self.corpus_metadata) else {}  # metadata

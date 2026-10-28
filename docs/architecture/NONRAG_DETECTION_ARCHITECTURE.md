@@ -535,7 +535,7 @@ Detection: Citation hallucination (false positive!)
 
 ## See Also
 
-- [Why Three Pipelines?](WHY_THREE_PIPELINES.md) - Rationale for separate detectors
+- [Why Three Pipelines?](WHY_THREE_PIPELINES.md) - Rationale for separate detectors (aspirational; NOT implemented)
 - [RAG Detection Architecture](RAG_DETECTION_ARCHITECTURE.md) - For RAG systems
 - [Unified Detection Architecture](UNIFIED_DETECTION_ARCHITECTURE.md) - For flexible/hybrid use
 - [Overall Architecture](../../HALLUCINATION_DETECTION_ARCHITECTURE.md) - Full system documentation

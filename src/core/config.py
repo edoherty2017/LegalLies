@@ -5,74 +5,19 @@ Uses Pydantic for type-safe configuration with validation and environment suppor
 Follows guide Section 5.1 for threshold configuration strategy.
 """
 
-from enum import Enum
 from pathlib import Path
 from typing import Optional
-from dataclasses import dataclass
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
-class GenerationMode(str, Enum):
-    """
-    Epistemic mode for generation - defines the evidence universe.
-
-    This is critical for academically sound hallucination detection because
-    different generation modes have different epistemic assumptions about
-    what evidence was available to the model.
-
-    See docs/architecture/WHY_THREE_PIPELINES.md for full rationale.
-    """
-
-    NON_RAG = "non_rag"
-    """
-    Pure parametric generation from model weights.
-
-    Evidence universe: Model's parametric knowledge from training.
-    Hallucination definition: Claims not supported by model's training data.
-    Verification strategy: Retrieve evidence post-hoc to approximate parametric knowledge.
-    """
-
-    RAG = "rag"
-    """
-    Retrieval-augmented generation with explicit evidence.
-
-    Evidence universe: Retrieved documents provided to the model.
-    Hallucination definition: Claims not grounded in retrieved evidence.
-    Verification strategy: Verify against the exact evidence shown to the model.
-    Assumption: Closed-world - model should ONLY use retrieved evidence.
-    """
-
-    UNKNOWN = "unknown"
-    """
-    Epistemic mode not specified.
-
-    Use unified detector with epistemic ambiguity warnings.
-    Not recommended for academic evaluation - always specify mode.
-    """
-
-
-@dataclass
-class EpistemicContext:
-    """
-    Epistemic context for hallucination detection.
-
-    Tracks what evidence was available during generation and how
-    the detector should interpret the output.
-
-    Attributes:
-        generation_mode: How the answer was generated (RAG vs non-RAG)
-        evidence_scope: What evidence was available during generation
-        evidence_provided_to_model: Whether retrieved_context was shown to model
-        closed_world_assumption: Whether model should ONLY use retrieved evidence
-    """
-
-    generation_mode: GenerationMode
-    evidence_scope: str  # "parametric", "retrieved", "hybrid"
-    evidence_provided_to_model: bool = False
-    closed_world_assumption: bool = False
-
+# NOTE: GenerationMode and EpistemicContext were removed in the 2026-10 accuracy pass.
+# They encoded a three-pipeline / open-vs-closed-world design that was never wired
+# into FactualityDetector: detection is epistemically symmetric (every claim is
+# verified against the oracle corpus regardless of generation mode). Keeping unused
+# enums implied per-mode behavior that does not exist. See README "One Detector, Two
+# Convenience Wrappers".
 
 class DetectorConfig(BaseSettings):
     """

@@ -1,5 +1,24 @@
 # Why Three Hallucination Detection Pipelines?
 
+> ### ⚠ Implementation note (2026-10)
+> **This document describes a design that was not implemented.** The shipped code
+> has **one** detection method, `FactualityDetector`, which verifies every claim
+> against the oracle corpus regardless of how the answer was generated — detection
+> is epistemically *symmetric*, not split by mode.
+>
+> - `RAGHallucinationDetector` and `NonRAGHallucinationDetector` are thin wrappers
+>   that differ only in whether evidence is supplied by the caller or auto-retrieved.
+> - `UnifiedHallucinationDetector` is a backwards-compatibility **alias** for
+>   `FactualityDetector`, not a third pipeline.
+> - The `GenerationMode` / `EpistemicContext` types this document refers to have
+>   been removed; they were never referenced by the detector.
+> - No reference-free (self-consistency / semantic-entropy) detector exists in this
+>   repository.
+>
+> The rationale below is retained because the epistemic argument is sound and
+> motivates future work — but **do not read it as a description of this codebase.**
+> See the README section "One Detector, Two Convenience Wrappers" for what actually runs.
+
 **TL;DR**: RAG and non-RAG outputs are **epistemically different**. Comparing them requires maintaining epistemic clarity through separate, purpose-built detectors.
 
 ---

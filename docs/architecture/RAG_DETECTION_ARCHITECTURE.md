@@ -478,7 +478,7 @@ Verdict: Hallucination (not in evidence)
 
 ## See Also
 
-- [Why Three Pipelines?](WHY_THREE_PIPELINES.md) - Rationale for separate detectors
+- [Why Three Pipelines?](WHY_THREE_PIPELINES.md) - Rationale for separate detectors (aspirational; NOT implemented)
 - [Non-RAG Detection Architecture](NONRAG_DETECTION_ARCHITECTURE.md) - For parametric generation
 - [Unified Detection Architecture](UNIFIED_DETECTION_ARCHITECTURE.md) - For flexible/hybrid use
 - [Overall Architecture](../../HALLUCINATION_DETECTION_ARCHITECTURE.md) - Full system documentation

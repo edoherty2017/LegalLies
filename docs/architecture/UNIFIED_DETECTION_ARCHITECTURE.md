@@ -1,8 +1,19 @@
 # Unified Hallucination Detection Architecture
 
-**Purpose**: Production-ready detector with explicit epistemic tracking for mixed/unknown generation modes.
+> ### WARNING - Implementation note (2026-10)
+> `UnifiedHallucinationDetector` is a **backwards-compatibility alias** for
+> `FactualityDetector` (`src/detection/unified_detector.py`, last line). It is not a
+> separate detector and it does **not** track generation mode or emit epistemic
+> ambiguity warnings - no such code exists. The `GenerationMode` / `EpistemicContext`
+> types this document assumes have been removed as unused.
+>
+> Statements below about mode tracking, ambiguity warnings, or per-mode behavior
+> describe an intended design, **not the shipped code**.
 
-**Epistemic Assumption**: Flexible - tracks mode explicitly and warns about ambiguity.
+**Purpose**: Claim-level factuality detection against a fixed oracle corpus.
+
+**Epistemic Assumption**: Symmetric - every claim is verified against the oracle
+corpus regardless of how the answer was generated.
 
 ---
 
@@ -573,7 +584,7 @@ result = detector.detect(query, answer)  # Best-effort
 
 ## See Also
 
-- [Why Three Pipelines?](WHY_THREE_PIPELINES.md) - Epistemic rationale
+- [Why Three Pipelines?](WHY_THREE_PIPELINES.md) - Epistemic rationale (aspirational; NOT implemented)
 - [RAG Detection Architecture](RAG_DETECTION_ARCHITECTURE.md) - RAG-specific detector
 - [Non-RAG Detection Architecture](NONRAG_DETECTION_ARCHITECTURE.md) - Non-RAG detector
 - [Overall System Architecture](../../HALLUCINATION_DETECTION_ARCHITECTURE.md) - Full system

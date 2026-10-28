@@ -1,8 +1,19 @@
 # Hallucination Detection Pipeline: Complete Data Flow
 
-**Version**: 1.0
-**Last Updated**: 2025-12-10
-**Status**: ✅ Verified against actual code implementation
+**Version**: 1.1
+**Last Updated**: 2026-10-28
+**Status**: ⚠ Partially stale - see note below
+
+> ### WARNING - Implementation note (2026-10)
+> This document was previously marked "verified against actual code." It is not.
+> The steps describing **epistemic mode routing** and **"emit epistemic ambiguity
+> warning"** (around lines 221 and 407 below) describe behavior that does **not
+> exist** in `FactualityDetector`; the `GenerationMode` / `EpistemicContext` types
+> they depend on were never wired in and have been removed.
+>
+> What actually runs is a single symmetric path: claim decomposition -> oracle-corpus
+> retrieval -> NLI entailment -> threshold/aggregation. The claim-decomposition,
+> retrieval, NLI and aggregation steps described here are accurate.
 
 This document traces the complete journey of a response through the hallucination detection system, from user input to final verdict.
 
@@ -559,7 +570,7 @@ START: I have a response to evaluate
 
 ## See Also
 
-- [WHY_THREE_PIPELINES.md](WHY_THREE_PIPELINES.md) - Epistemic rationale for three detectors
+- [WHY_THREE_PIPELINES.md](WHY_THREE_PIPELINES.md) - Epistemic rationale (aspirational design; NOT implemented)
 - [RAG_DETECTION_ARCHITECTURE.md](RAG_DETECTION_ARCHITECTURE.md) - RAG detector details
 - [NONRAG_DETECTION_ARCHITECTURE.md](NONRAG_DETECTION_ARCHITECTURE.md) - Non-RAG detector details
 - [UNIFIED_DETECTION_ARCHITECTURE.md](UNIFIED_DETECTION_ARCHITECTURE.md) - Unified detector details

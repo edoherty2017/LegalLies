@@ -1,1 +1,12 @@
 .DS_Store
+
+# Local virtualenv
+.venv/
+venv/
+
+# HF / model caches
+.cache/
+
+# Python bytecode
+__pycache__/
+*.py[cod]

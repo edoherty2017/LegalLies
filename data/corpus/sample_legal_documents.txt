@@ -1,0 +1,211 @@
+# Sample Legal Documents for Retrieval Testing
+# This file contains 50+ legal documents covering various topics
+# Each document is separated by "---DOCUMENT---"
+
+---DOCUMENT---
+Fourth Amendment - Unreasonable Searches and Seizures
+The Fourth Amendment to the United States Constitution protects against unreasonable searches and seizures. It requires that warrants be supported by probable cause and particularly describe the place to be searched and the persons or things to be seized. This protection applies to searches conducted by government agents and law enforcement officers.
+
+---DOCUMENT---
+Exclusionary Rule - Mapp v. Ohio
+In Mapp v. Ohio, 367 U.S. 643 (1961), the Supreme Court held that evidence obtained in violation of the Fourth Amendment cannot be used in state criminal prosecutions. This exclusionary rule is designed to deter police misconduct by removing the incentive to conduct illegal searches.
+
+---DOCUMENT---
+Inevitable Discovery Doctrine - Nix v. Williams
+The inevitable discovery doctrine, established in Nix v. Williams, 467 U.S. 431 (1984), allows illegally obtained evidence to be admitted if the prosecution can prove by a preponderance of the evidence that the evidence would have been discovered through lawful means. This is an exception to the exclusionary rule.
+
+---DOCUMENT---
+Knock-and-Announce Rule - Wilson v. Arkansas
+In Wilson v. Arkansas, 514 U.S. 927 (1995), the Supreme Court held that the Fourth Amendment incorporates the common-law knock-and-announce principle, requiring police to knock and announce their presence before entering a residence to execute a search warrant. Violations may lead to suppression of evidence.
+
+---DOCUMENT---
+Hudson v. Michigan - Knock-and-Announce Violations
+Hudson v. Michigan, 547 U.S. 586 (2006), held that violations of the knock-and-announce rule do not automatically trigger the exclusionary rule. The Court reasoned that the social costs of applying the exclusionary rule would outweigh the benefits in most knock-and-announce violation cases.
+
+---DOCUMENT---
+Miranda Rights - Miranda v. Arizona
+Miranda v. Arizona, 384 U.S. 436 (1966), established that suspects in custody must be informed of their rights before interrogation. These rights include the right to remain silent, that anything said can be used against them, and the right to an attorney. Failure to provide Miranda warnings renders statements inadmissible.
+
+---DOCUMENT---
+Good Faith Exception - United States v. Leon
+United States v. Leon, 468 U.S. 897 (1984), created a good faith exception to the exclusionary rule. Evidence obtained by police who reasonably relied on a warrant later found invalid may still be admissible if the officers acted in objectively reasonable good faith.
+
+---DOCUMENT---
+28 U.S.C. § 1331 - Federal Question Jurisdiction
+Federal district courts have original jurisdiction of all civil actions arising under the Constitution, laws, or treaties of the United States. This is known as federal question jurisdiction. No minimum amount in controversy is required for federal question cases, unlike diversity jurisdiction.
+
+---DOCUMENT---
+28 U.S.C. § 1332 - Diversity Jurisdiction
+Federal courts have diversity jurisdiction when the amount in controversy exceeds $75,000 and the parties are citizens of different states. Complete diversity is required, meaning no plaintiff can be a citizen of the same state as any defendant. This jurisdictional requirement promotes neutrality by allowing out-of-state litigants access to federal courts.
+
+---DOCUMENT---
+Subject-Matter Jurisdiction Cannot Be Waived
+Federal courts are courts of limited jurisdiction, possessing only that power authorized by Constitution and statute. Subject-matter jurisdiction cannot be waived or forfeited and can be raised at any time, even on appeal. Courts have an independent obligation to examine their own jurisdiction.
+
+---DOCUMENT---
+Telephone Consumer Protection Act (TCPA) - 47 U.S.C. § 227
+The TCPA restricts telemarketing calls, auto-dialed calls, prerecorded calls, text messages, and unsolicited faxes. It provides for a private right of action with statutory damages of $500 to $1,500 per violation. The FCC has authority to issue regulations implementing the TCPA.
+
+---DOCUMENT---
+Mims v. Arrow Financial Services - TCPA Jurisdiction
+In Mims v. Arrow Financial Services, LLC, 565 U.S. 368 (2012), the Supreme Court held that federal district courts have federal-question jurisdiction under 28 U.S.C. § 1331 over private TCPA actions. The Court rejected the argument that the FCC's concurrent jurisdiction divested district courts of jurisdiction.
+
+---DOCUMENT---
+Patent Eligibility - 35 U.S.C. § 101
+35 U.S.C. § 101 defines patent-eligible subject matter as any new and useful process, machine, manufacture, or composition of matter. However, abstract ideas, laws of nature, and natural phenomena are not patentable. Alice Corp. v. CLS Bank International, 573 U.S. 208 (2014), established a two-step framework for determining patent eligibility.
+
+---DOCUMENT---
+Non-Obviousness - 35 U.S.C. § 103
+An invention must be non-obvious to a person having ordinary skill in the art to be patentable. KSR International Co. v. Teleflex Inc., 550 U.S. 398 (2007), rejected the rigid teaching-suggestion-motivation test, holding that common sense and ordinary innovation can render claims obvious.
+
+---DOCUMENT---
+Patent Infringement - 35 U.S.C. § 271
+Patent infringement occurs when someone makes, uses, sells, or offers to sell a patented invention without authorization. Section 271 defines direct infringement, induced infringement (encouraging others to infringe), and contributory infringement (selling components specifically designed for infringing use).
+
+---DOCUMENT---
+Doctrine of Equivalents - Patent Infringement
+The doctrine of equivalents allows a finding of patent infringement even when the accused device does not literally infringe the patent claims, if it performs substantially the same function in substantially the same way to achieve substantially the same result. This doctrine prevents infringers from making insubstantial changes to avoid literal infringement.
+
+---DOCUMENT---
+Contract Formation - Offer, Acceptance, Consideration
+A valid contract requires three essential elements: (1) offer - a manifestation of willingness to enter into a bargain; (2) acceptance - assent to the terms of the offer; and (3) consideration - something of value exchanged between the parties. Each element must be present for a contract to be enforceable.
+
+---DOCUMENT---
+Statute of Frauds - Writing Requirement
+The Statute of Frauds requires certain contracts to be in writing to be enforceable. These include contracts for the sale of land, contracts that cannot be performed within one year, contracts for the sale of goods over $500 (UCC § 2-201), and contracts to answer for the debt of another.
+
+---DOCUMENT---
+Parol Evidence Rule - Integration
+The parol evidence rule prohibits the introduction of extrinsic evidence to contradict, vary, or add to the terms of a fully integrated written contract. However, extrinsic evidence may be admissible to show fraud, duress, mistake, or to clarify ambiguous terms.
+
+---DOCUMENT---
+Negligence Elements - Duty, Breach, Causation, Damages
+To prove negligence, a plaintiff must establish four elements: (1) the defendant owed a duty of care to the plaintiff; (2) the defendant breached that duty; (3) the breach was the actual and proximate cause of the plaintiff's injuries; and (4) the plaintiff suffered damages. The standard of care is generally that of a reasonably prudent person under similar circumstances.
+
+---DOCUMENT---
+Strict Liability - Abnormally Dangerous Activities
+Strict liability applies to abnormally dangerous activities, meaning liability without fault. Under Restatement (Second) of Torts § 519, one who carries on an abnormally dangerous activity is strictly liable for harm to others resulting from the activity, even if utmost care is exercised.
+
+---DOCUMENT---
+Products Liability - Defective Products
+Under Restatement (Second) of Torts § 402A, a manufacturer or seller is strictly liable for injuries caused by defective products. A product is defective if it contains a manufacturing defect, design defect, or inadequate warnings. The plaintiff need not prove negligence.
+
+---DOCUMENT---
+Federal Rules of Civil Procedure Rule 12(b)(6) - Motion to Dismiss
+Rule 12(b)(6) allows dismissal for failure to state a claim upon which relief can be granted. Bell Atlantic Corp. v. Twombly, 550 U.S. 544 (2007), and Ashcroft v. Iqbal, 556 U.S. 662 (2009), established the plausibility pleading standard, requiring more than conclusory statements.
+
+---DOCUMENT---
+Federal Rules of Civil Procedure Rule 56 - Summary Judgment
+Rule 56 governs summary judgment motions. A court must grant summary judgment if there is no genuine dispute as to any material fact and the movant is entitled to judgment as a matter of law. The moving party bears the initial burden of demonstrating the absence of a genuine issue of material fact.
+
+---DOCUMENT---
+Administrative Procedure Act - Judicial Review
+The APA, 5 U.S.C. § 706, provides for judicial review of agency actions. Courts review agency actions under several standards: arbitrary and capricious review for informal rulemaking, substantial evidence review for formal proceedings, and de novo review for constitutional and legal questions.
+
+---DOCUMENT---
+Chevron Deference - Agency Interpretation (Overruled 2024)
+Chevron U.S.A., Inc. v. Natural Resources Defense Council, Inc., 467 U.S. 837 (1984), required courts to defer to an agency's reasonable interpretation of an ambiguous statute it administers. However, this doctrine was overruled by Loper Bright Enterprises v. Raimondo, 144 S. Ct. 2244 (2024).
+
+---DOCUMENT---
+Probable Cause Standard - Fourth Amendment
+Probable cause exists when the facts and circumstances within an officer's knowledge are sufficient to warrant a reasonable person to believe that a crime has been or is being committed. This standard applies to arrests, searches, and the issuance of warrants. It requires more than mere suspicion but less than proof beyond a reasonable doubt.
+
+---DOCUMENT---
+Reasonable Suspicion - Terry v. Ohio
+Terry v. Ohio, 392 U.S. 1 (1968), established that police may conduct a brief investigatory stop when they have reasonable suspicion that criminal activity is afoot. This standard is lower than probable cause and must be based on specific and articulable facts, not mere hunches.
+
+---DOCUMENT---
+Qualified Immunity - Government Officials
+Qualified immunity shields government officials from civil liability for discretionary functions performed in good faith. The doctrine balances the need to hold officials accountable with the need to avoid deterring effective performance of government duties. Harlow v. Fitzgerald, 457 U.S. 800 (1982), established the modern qualified immunity framework.
+
+---DOCUMENT---
+Double Jeopardy - Fifth Amendment
+The Fifth Amendment's Double Jeopardy Clause protects against multiple prosecutions for the same offense. It bars (1) a second prosecution for the same offense after acquittal, (2) a second prosecution for the same offense after conviction, and (3) multiple punishments for the same offense. Blockburger v. United States, 284 U.S. 299 (1932), established the test for determining whether offenses are the same.
+
+---DOCUMENT---
+Self-Incrimination - Fifth Amendment Privilege
+The Fifth Amendment privilege against self-incrimination applies in any proceeding, civil or criminal, where answers might incriminate. The privilege applies only to testimonial evidence, not physical evidence. Witnesses may invoke the privilege if they have reasonable cause to apprehend danger from a direct answer.
+
+---DOCUMENT---
+Due Process - Procedural and Substantive
+The Fifth and Fourteenth Amendments guarantee due process of law. Procedural due process requires notice and an opportunity to be heard before deprivation of life, liberty, or property. Substantive due process protects certain fundamental rights from government interference, regardless of procedures followed.
+
+---DOCUMENT---
+Equal Protection Clause - Fourteenth Amendment
+The Equal Protection Clause prohibits states from denying any person equal protection of the laws. Courts apply different levels of scrutiny depending on the classification: strict scrutiny for suspect classifications (race, national origin), intermediate scrutiny for quasi-suspect classifications (gender), and rational basis review for other classifications.
+
+---DOCUMENT---
+Commerce Clause - Congressional Power
+Article I, Section 8, Clause 3 grants Congress power to regulate interstate commerce. United States v. Lopez, 514 U.S. 549 (1995), limited this power, holding that Congress may regulate (1) channels of interstate commerce, (2) instrumentalities of interstate commerce, and (3) activities substantially affecting interstate commerce.
+
+---DOCUMENT---
+Supremacy Clause - Federal Preemption
+Article VI, Clause 2 establishes that federal law is the supreme law of the land. Federal law preempts state law when (1) Congress explicitly preempts state law, (2) federal regulation is so pervasive that it occupies the field, or (3) state law conflicts with federal law.
+
+---DOCUMENT---
+Takings Clause - Just Compensation
+The Fifth Amendment's Takings Clause requires that private property shall not be taken for public use without just compensation. A taking occurs when government physically occupies property or when regulation goes too far in diminishing property value. Penn Central Transportation Co. v. New York City, 438 U.S. 104 (1978), established a multi-factor test.
+
+---DOCUMENT---
+First Amendment - Freedom of Speech
+The First Amendment protects freedom of speech from government abridgment. Content-based restrictions receive strict scrutiny, while content-neutral time, place, and manner restrictions receive intermediate scrutiny. Certain categories of speech, such as obscenity, defamation, and true threats, receive less protection.
+
+---DOCUMENT---
+Free Exercise Clause - Religious Freedom
+The Free Exercise Clause protects the right to practice one's religion. Employment Division v. Smith, 494 U.S. 872 (1990), held that neutral laws of general applicability need not be justified by a compelling governmental interest even if they burden religious practice.
+
+---DOCUMENT---
+Establishment Clause - Religion
+The Establishment Clause prohibits government from establishing religion. Lemon v. Kurtzman, 403 U.S. 602 (1971), established a three-part test: (1) statute must have secular purpose, (2) principal effect must neither advance nor inhibit religion, and (3) must not foster excessive government entanglement with religion.
+
+---DOCUMENT---
+Habeas Corpus - Federal Review of State Convictions
+28 U.S.C. § 2254 governs federal habeas corpus review of state criminal convictions. Under the Antiterrorism and Effective Death Penalty Act (AEDPA), federal courts give deference to state court decisions. A petitioner must show the state court decision was contrary to or an unreasonable application of clearly established federal law.
+
+---DOCUMENT---
+Right to Counsel - Sixth Amendment
+The Sixth Amendment guarantees the right to counsel in criminal prosecutions. Gideon v. Wainwright, 372 U.S. 335 (1963), held that states must provide counsel to indigent defendants in felony cases. The right attaches at critical stages of prosecution, beginning with formal charging.
+
+---DOCUMENT---
+Speedy Trial - Sixth Amendment
+The Sixth Amendment guarantees the right to a speedy trial. Barker v. Wingo, 407 U.S. 514 (1972), established a four-factor balancing test: (1) length of delay, (2) reason for delay, (3) defendant's assertion of the right, and (4) prejudice to the defendant. Additionally, the Speedy Trial Act, 18 U.S.C. § 3161, imposes specific time limits in federal cases.
+
+---DOCUMENT---
+Confrontation Clause - Sixth Amendment
+The Confrontation Clause guarantees criminal defendants the right to confront witnesses against them. Crawford v. Washington, 542 U.S. 36 (2004), held that out-of-court testimonial statements are inadmissible unless the declarant is unavailable and the defendant had a prior opportunity for cross-examination.
+
+---DOCUMENT---
+Jury Trial Right - Sixth and Seventh Amendments
+The Sixth Amendment guarantees jury trials in criminal prosecutions. The Seventh Amendment guarantees jury trials in civil cases exceeding $20. In criminal cases, juries must be unanimous and consist of at least six members. Apodaca v. Oregon, 406 U.S. 404 (1972).
+
+---DOCUMENT---
+Federal Sentencing Guidelines - Advisory Nature
+The Federal Sentencing Guidelines were originally mandatory but were rendered advisory by United States v. Booker, 543 U.S. 220 (2005). Courts must calculate and consider the Guidelines but may vary from them based on 18 U.S.C. § 3553(a) factors. Sentences are reviewed for reasonableness on appeal.
+
+---DOCUMENT---
+Ineffective Assistance of Counsel - Strickland Test
+Strickland v. Washington, 466 U.S. 668 (1984), established a two-prong test for ineffective assistance of counsel claims. A defendant must show (1) counsel's performance was deficient, falling below an objective standard of reasonableness, and (2) the deficient performance prejudiced the defense.
+
+---DOCUMENT---
+Prosecutorial Misconduct - Brady Rule
+Brady v. Maryland, 373 U.S. 83 (1963), requires prosecutors to disclose material exculpatory evidence to the defense. Evidence is material if there is a reasonable probability that disclosure would have changed the outcome. Failure to disclose such evidence violates due process.
+
+---DOCUMENT---
+Hearsay Rule - Federal Rules of Evidence 802
+Hearsay is an out-of-court statement offered to prove the truth of the matter asserted. FRE 802 generally excludes hearsay unless an exception applies. The rule aims to ensure reliability by requiring witnesses to testify under oath, subject to cross-examination.
+
+---DOCUMENT---
+Hearsay Exceptions - Federal Rules of Evidence 803, 804
+FRE 803 provides exceptions regardless of declarant availability, including present sense impressions, excited utterances, statements for medical diagnosis, and business records. FRE 804 provides exceptions when the declarant is unavailable, including former testimony, dying declarations, and statements against interest.
+
+---DOCUMENT---
+Expert Testimony - Daubert Standard
+Daubert v. Merrell Dow Pharmaceuticals, Inc., 509 U.S. 579 (1993), established that trial courts must act as gatekeepers for expert testimony. Courts consider whether the theory or technique has been tested, subjected to peer review, has a known error rate, and has general acceptance in the relevant scientific community.
+
+---DOCUMENT---
+Privileges - Attorney-Client and Work Product
+The attorney-client privilege protects confidential communications between attorneys and clients made for the purpose of seeking or providing legal advice. The work product doctrine, established in Hickman v. Taylor, 329 U.S. 495 (1947), protects materials prepared in anticipation of litigation, with special protection for mental impressions and legal theories.
+
+---DOCUMENT---
+Class Actions - Federal Rule of Civil Procedure 23
+Rule 23 governs class actions in federal court. A class action may be maintained if (1) the class is so numerous that joinder is impracticable, (2) there are common questions of law or fact, (3) the claims of the representatives are typical, and (4) the representatives will fairly and adequately protect the interests of the class.

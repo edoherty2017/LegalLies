@@ -140,7 +140,9 @@ def evaluate_variant(
 
         print(f"  Hallucination: {detection_result.is_hallucinated}")
         print(f"  Testability: {detection_result.testability_rate:.1%} ({detection_result.num_testable}/{detection_result.num_claims} claims adjudicable)")
-        print(f"  Hallucination rate: {detection_result.hallucination_rate:.1%} ({detection_result.num_contradicted}/{detection_result.num_testable} testable wrong)")
+        hr = detection_result.hallucination_rate
+        hr_s = "n/a (nothing testable)" if hr is None else f"{hr:.1%}"
+        print(f"  Hallucination rate: {hr_s} ({detection_result.num_contradicted}/{detection_result.num_testable} testable wrong)")
         print(f"  Breakdown: {detection_result.num_supported} supported, {detection_result.num_contradicted} contradicted, {detection_result.num_unsupported} unsupported")
         print(f"  Detection time: {detection_result.latency_ms:.1f}ms")
 

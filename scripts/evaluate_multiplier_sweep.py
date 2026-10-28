@@ -87,7 +87,9 @@ def evaluate_multiplier(multiplier: float, detector: UnifiedHallucinationDetecto
         detection = detector.detect(query=question, answer=answer)
 
         print(f"  Testability: {detection.testability_rate:.1%} ({detection.num_testable}/{detection.num_claims})")
-        print(f"  Hallucination: {detection.hallucination_rate:.1%} ({detection.num_contradicted}/{detection.num_testable})")
+        hr = detection.hallucination_rate
+        hr_s = "n/a (nothing testable)" if hr is None else f"{hr:.1%}"
+        print(f"  Hallucination: {hr_s} ({detection.num_contradicted}/{detection.num_testable})")
 
         results.append({
             "multiplier": multiplier,

@@ -68,7 +68,9 @@ def main():
 
         print(f"\n  DUAL METRICS:")
         print(f"    Testability:    {result.testability_rate:.1%} ({result.num_testable}/{result.num_claims} claims adjudicable)")
-        print(f"    Hallucination:  {result.hallucination_rate:.1%} ({result.num_contradicted}/{result.num_testable} testable wrong)")
+        hr = result.hallucination_rate
+        hr_s = "n/a (nothing testable)" if hr is None else f"{hr:.1%}"
+        print(f"    Hallucination:  {hr_s} ({result.num_contradicted}/{result.num_testable} testable wrong)")
         print(f"  BREAKDOWN:")
         print(f"    Supported:      {result.num_supported}")
         print(f"    Contradicted:   {result.num_contradicted}")

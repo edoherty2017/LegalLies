@@ -70,7 +70,9 @@ def main():
             print(f'  Generated: {answer[:80]}...')
 
             detection = detector.detect(query=question, answer=answer)
-            print(f'  Testability: {detection.testability_rate:.1%} | Hallucination: {detection.hallucination_rate:.1%}')
+            hr = detection.hallucination_rate
+            hr_s = 'n/a' if hr is None else f'{hr:.1%}'
+            print(f'  Testability: {detection.testability_rate:.1%} | Hallucination: {hr_s}')
 
             all_results.append({
                 'multiplier': multiplier,

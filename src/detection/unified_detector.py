@@ -93,7 +93,9 @@ class FactualityResult:
     is_hallucinated: bool  # True ONLY if any claim is CONTRADICTED
 
     # DUAL METRICS (always report both)
-    hallucination_rate: float  # Contradicted / (Supported + Contradicted)
+    # None when num_testable == 0: the rate is undefined, not zero. Never
+    # average these per-answer values without filtering None; pool the counts.
+    hallucination_rate: Optional[float]  # Contradicted / (Supported + Contradicted)
     testability_rate: float  # (Supported + Contradicted) / Total Claims
     num_testable: int  # Supported + Contradicted (adjudicable claims)
 
@@ -191,8 +193,17 @@ class FactualityDetector:
                 )
                 print(f"[OK] Retrieval loaded: {self.config.retrieval_index_path}")
             except Exception as e:
-                print(f"[WARNING] Could not load retrieval: {e}")
-                self.retriever = None
+                # Do not continue with retrieval silently disabled. Without a
+                # retriever every claim becomes UNSUPPORTED, num_testable is 0,
+                # and the run reports a clean 0% hallucination rate - a broken
+                # environment that reads as a perfect result. Fail loudly.
+                raise RuntimeError(
+                    f"Retrieval is enabled but the index could not be loaded from "
+                    f"{self.config.retrieval_index_path}: {e}. Every claim would be "
+                    f"scored UNSUPPORTED, producing a meaningless 0% hallucination "
+                    f"rate. Build the index (scripts/build_retrieval_index.py) or set "
+                    f"retrieval_enabled=False deliberately."
+                ) from e
 
         print("[OK] Factuality Detector initialized")
 
@@ -225,7 +236,7 @@ class FactualityDetector:
             # No claims to verify
             return FactualityResult(
                 is_hallucinated=False,
-                hallucination_rate=0.0,
+                hallucination_rate=None,  # undefined: nothing was adjudicable
                 testability_rate=0.0,
                 num_testable=0,
                 contradiction_rate=0.0,
@@ -242,15 +253,15 @@ class FactualityDetector:
         # ========================================
         # Step 2: Retrieval (if no evidence provided)
         # ========================================
-        if evidence is None or len(evidence) == 0:
-            if self.retriever is not None:
-                retrieval_query = f"{query} {answer}"
-                evidence = self.retriever.retrieve_evidence(
-                    query=retrieval_query,
-                    top_k=self.config.retrieval_top_k,
-                )
-            else:
-                evidence = []
+        # Evidence supplied by the caller applies to the whole answer. When we
+        # retrieve it ourselves we do so per claim, below: retrieving once for
+        # f"{query} {answer}" returned one passage set covering the whole answer,
+        # so every claim was checked against passages fetched for other claims.
+        # In a corpus holding many cases on the same topic that is how an
+        # unrelated holding ends up contradicting a correct claim.
+        caller_supplied_evidence = bool(evidence)
+        if not caller_supplied_evidence:
+            evidence = []
 
         # ========================================
         # Step 3: NLI Verification (per claim)
@@ -260,7 +271,19 @@ class FactualityDetector:
         for claim in claims:
             claim_text = claim.claim_text
 
-            if not evidence:
+            # Retrieve evidence for this specific claim unless the caller gave us
+            # an evidence set to use for the whole answer.
+            if caller_supplied_evidence:
+                claim_evidence = evidence
+            elif self.retriever is not None:
+                claim_evidence = self.retriever.retrieve_for_claim(
+                    claim=claim_text,
+                    top_k=self.config.retrieval_top_k,
+                )
+            else:
+                claim_evidence = []
+
+            if not claim_evidence:
                 # No evidence available - unsupported
                 claim_verdicts.append(ClaimVerdict(
                     claim=claim_text,
@@ -270,9 +293,9 @@ class FactualityDetector:
                 ))
                 continue
 
-            # Run NLI against all evidence
+            # Run NLI against this claim's evidence
             nli_result = self.nli_verifier.verify_claim_against_multiple_sources(
-                claim_text, evidence
+                claim_text, claim_evidence
             )
 
             overall_status = nli_result.get("overall_status", "UNSUPPORTED")
@@ -332,7 +355,16 @@ class FactualityDetector:
         # 2. Hallucination Rate: "Of claims we could verify, what % were wrong?"
         #    Conditional error rate among testable claims only
         #    This is a conservative lower-bound (Dahl et al. 2024)
-        hallucination_rate = num_contradicted / num_testable if num_testable > 0 else 0.0
+        #    When nothing was adjudicable the rate is undefined, not zero.
+        #    Returning 0.0 made an answer whose claims could not be checked look
+        #    identical to one whose claims were all verified correct, so averaging
+        #    per-answer rates counted untestable answers as perfect scores and
+        #    pulled the reported rate down - the "RAG bias" the dual metric is
+        #    meant to prevent. Callers must now either skip None or pool counts
+        #    (sum contradicted / sum testable), which is what the README reports.
+        hallucination_rate = (
+            num_contradicted / num_testable if num_testable > 0 else None
+        )
 
         # Raw rates over all claims (for detailed analysis)
         contradiction_rate = num_contradicted / num_claims if num_claims > 0 else 0.0

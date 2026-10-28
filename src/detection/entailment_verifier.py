@@ -113,8 +113,15 @@ class EntailmentVerifier:
                     print("Error moving HF model to CUDA:", e)
             print(f"Loaded NLI model: {model_name} on {device}")
         except Exception as e:
-            print(f"Error loading NLI model {model_name}: {e}")
-            self.model = None
+            # Do not fall back to self.model = None. With no model every
+            # verify_claim returns NEUTRAL, so every claim is UNSUPPORTED,
+            # num_testable is 0 and the run reports a 0% hallucination rate.
+            # A failed download would silently read as a flawless result.
+            raise RuntimeError(
+                f"Could not load the NLI cross-encoder {model_name!r} on {device}: "
+                f"{e}. Without it every claim is scored UNSUPPORTED, which yields a "
+                f"meaningless 0% hallucination rate, so refusing to continue."
+            ) from e
 
     @staticmethod
     def _has_cuda() -> bool:
@@ -276,16 +283,35 @@ class EntailmentVerifier:
             if result.is_contradicted:
                 contradiction_count += 1
 
-        # Determine overall status
-        if contradiction_count > 0:
+        # Determine overall status.
+        #
+        # Previously any single contradicting source won outright, even when
+        # other sources entailed the claim. Evidence is retrieved per claim from
+        # a corpus that contains many cases on the same topic, so a passage about
+        # a different holding can score contradiction while a genuinely relevant
+        # passage entails the claim. Letting the contradiction win marks correct
+        # claims as hallucinations and inflates the hallucination rate.
+        #
+        # Resolve conflicts by strength instead: the label with the highest
+        # cross-encoder confidence wins. A claim is only CONTRADICTED when the
+        # best contradicting source outscores the best supporting one. Ties go to
+        # CONTRADICTED, keeping the metric conservative.
+        best_contradiction = max(
+            (r.confidence for r in results if r.is_contradicted), default=0.0
+        )
+        best_support = max(
+            (r.confidence for r in results if r.is_supported), default=0.0
+        )
+
+        if contradiction_count and best_contradiction >= best_support:
             overall_status = "CONTRADICTED"
-            confidence = max(r.confidence for r in results if r.is_contradicted)
-        elif entailment_count > 0:
+            confidence = best_contradiction
+        elif entailment_count:
             overall_status = "SUPPORTED"
-            confidence = max(r.confidence for r in results if r.is_supported)
+            confidence = best_support
         else:
             overall_status = "UNSUPPORTED"
-            confidence = max(r.confidence for r in results) if results else 0.0
+            confidence = max((r.confidence for r in results), default=0.0)
 
         return {
             "claim": claim,
@@ -297,6 +323,10 @@ class EntailmentVerifier:
             "neutral_sources": len(source_documents)
             - entailment_count
             - contradiction_count,
+            # True when sources disagree; the stronger label was taken.
+            "conflicting_sources": bool(entailment_count and contradiction_count),
+            "best_support_confidence": best_support,
+            "best_contradiction_confidence": best_contradiction,
             "per_source_results": [r.to_dict() for r in results],
         }
 

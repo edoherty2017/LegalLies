@@ -61,8 +61,19 @@ class DocumentRetriever:
         self.citation_graph: Optional[CitationGraph] = None
         self.hybrid_ranker: Optional[HybridRanker] = None
 
-        # Load index if provided
-        if self.index_path and self.index_path.exists():
+        # Load index if provided. A configured-but-missing path used to be
+        # skipped silently: retrieve_evidence then returned [] for every query
+        # while the detector still printed "[OK] Retrieval loaded", so a run
+        # against a nonexistent index looked successful and scored every claim
+        # UNSUPPORTED.
+        if self.index_path:
+            if not self.index_path.exists():
+                raise FileNotFoundError(
+                    f"Retrieval index not found at {self.index_path}. Retrieval "
+                    f"would return no evidence for every claim, scoring them all "
+                    f"UNSUPPORTED and reporting a meaningless 0% hallucination "
+                    f"rate. Build it with scripts/build_retrieval_index.py."
+                )
             self._load_index()
 
     def _load_index(self):

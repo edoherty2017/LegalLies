@@ -93,6 +93,26 @@ class DocumentNode:
     citing_docs: List[str] = field(default_factory=list)     # Documents citing this
 
 
+def _canonical_cite(cite: str) -> str:
+    """
+    Reduce a case citation to a comparison key.
+
+    "457 U.S. 800", "457-U.S.-800" and "457  u.s.  800" all become "457us800",
+    so citations extracted from text can be matched against the citation a
+    document was registered with regardless of spacing, hyphenation, internal
+    periods or case.
+    """
+    if not cite:
+        return ""
+    return "".join(ch for ch in cite.lower() if ch.isalnum())
+
+
+# Regex fragments used to build the reporter alternation.
+PERIOD = "\\."
+WS = "\\s*"
+ESCAPED_SPACE = "\\ "
+
+
 class CitationExtractor:
     """
     Extract legal citations from text using regex patterns.
@@ -105,11 +125,12 @@ class CitationExtractor:
 
     def __init__(self):
         """Initialize citation extractor with regex patterns."""
+        # Reporter abbreviations. Loaded first because the case-citation
+        # regex is built from them.
+        self.reporters = self._load_reporters()
+
         # Compile citation patterns
         self.patterns = self._compile_patterns()
-
-        # Reporter abbreviations (for validation)
-        self.reporters = self._load_reporters()
 
     def _compile_patterns(self) -> Dict[str, re.Pattern]:
         """
@@ -120,8 +141,19 @@ class CitationExtractor:
         """
         patterns = {
             # Case citations: "500 U.S. 123" or "500 U.S. 123 (2000)"
+            # Case citations: "500 U.S. 123", "123 F.3d 456 (1999)",
+            # "123 S. Ct. 456", "500 F. Supp. 2d 100", "99 L. Ed. 2d 1".
+            #
+            # Built from self.reporters rather than a generic character class.
+            # The original group, ([A-Z][A-Za-z.]*\.?), admitted neither digits
+            # nor internal spaces: for "123 F.3d 456" it matched only "F." and
+            # then failed on the "3", and "S. Ct." / "F. Supp." failed on the
+            # space. Almost no circuit, district or regional citation produced
+            # an edge, so PageRank stayed near uniform and the 30% authority
+            # weight in HybridRanker contributed only noise.
             "case_standard": re.compile(
-                r'\b(\d+)\s+([A-Z][A-Za-z.]*\.?)\s+(\d+)(?:\s+\((\d{4})\))?',
+                r'\b(\d+)\s+(' + self._reporter_alternation() + r')\s+(\d+)'
+                r'(?:\s+\((\d{4})\))?',
             ),
 
             # U.S. Code: "17 U.S.C. § 106" or "17 USC 106"
@@ -177,10 +209,38 @@ class CitationExtractor:
             "N.E.", "N.E.2d", "N.E.3d",             # North Eastern
             "S.E.", "S.E.2d",                       # South Eastern
             "S.W.", "S.W.2d", "S.W.3d",             # South Western
-            "N.W.", "N.W.2d",                       # North Western
+            "N.W.", "N.W.2d", "N.W.3d",             # North Western
+
+            # Typeset (spaced) variants and series the corpus actually contains
+            "S. Ct.", "L. Ed.", "L. Ed. 2d", "L.Ed.2d",
+            "F. Supp.", "F. Supp. 2d", "F. Supp. 3d",
+            "F. App'x", "F.App'x", "Fed. Cl.", "Fed. Appx.",
+            "So.", "So.2d", "So.3d", "Cal. App.", "Cal.App.",
+            "Ohio St.", "Ohio St.2d", "Ohio St.3d", "Wis.2d",
+            "Mass.", "N.J.", "Mich.", "Minn.", "Md.", "Va.", "Ga.", "Fla.",
         }
 
         return reporters
+
+    def _reporter_alternation(self) -> str:
+        """
+        Build a regex alternation matching any known reporter.
+
+        Longest first, so "F. Supp. 2d" is preferred over "F." and "U.S.C." is
+        never shortened to "U.S.". Every literal period may be followed by
+        optional whitespace, and any space inside an entry becomes optional
+        whitespace, so a single list entry matches both the canonical
+        "F.Supp.2d" and the typeset "F. Supp. 2d".
+        """
+        parts = []
+        for reporter in sorted(self.reporters, key=len, reverse=True):
+            pattern = re.escape(reporter)
+            # Allow optional whitespace after each literal period, and treat any
+            # space inside the entry as optional whitespace.
+            pattern = pattern.replace(PERIOD, PERIOD + WS)
+            pattern = pattern.replace(ESCAPED_SPACE, WS).replace(" ", WS)
+            parts.append(pattern)
+        return "(?:" + "|".join(parts) + ")"
 
     def extract(self, text: str, doc_id: str) -> List[Citation]:
         """
@@ -343,6 +403,15 @@ class CitationGraph:
         # NetworkX directed graph
         self.graph = nx.DiGraph()
 
+        # Citations that did not resolve when their citing document was added,
+        # because the cited document had not been added yet. Held as
+        # (citing_doc_id, Citation) and retried whenever a new document arrives
+        # and again in compute_pagerank. Without this, edge creation depended on
+        # insertion order: a 2020 opinion citing Harlow added before Harlow
+        # itself silently lost the edge for good, so landmark cases ended up with
+        # near-minimum PageRank - inverting the authority boost ranking relies on.
+        self._pending_citations = []
+
         # Document metadata
         self.documents: Dict[str, DocumentNode] = {}
 
@@ -393,27 +462,89 @@ class CitationGraph:
         # Extract citations from text
         citations = self.extractor.extract(text, doc_id)
 
-        # Add citation edges
+        # Add citation edges, deferring any that cannot be resolved yet.
         for citation in citations:
-            # Try to resolve citation to doc_id
-            cited_doc_id = self._resolve_citation(citation)
+            if not self._add_citation_edge(doc_id, citation):
+                self._pending_citations.append((doc_id, citation))
 
-            if cited_doc_id and cited_doc_id in self.documents:
-                # Add edge: doc_id → cited_doc_id
-                self.graph.add_edge(doc_id, cited_doc_id)
-
-                # Update metadata
-                node.cited_docs.append(cited_doc_id)
-                self.documents[cited_doc_id].citing_docs.append(doc_id)
+        # This new document may resolve citations deferred earlier.
+        self._resolve_pending_citations()
 
         # Update degrees
-        node.out_degree = self.graph.out_degree(doc_id)
-        node.in_degree = self.graph.in_degree(doc_id)
+        self._refresh_degrees()
 
         # Invalidate cached PageRank
         self.pagerank_scores = {}
 
         return node
+
+    def _add_citation_edge(self, citing_doc_id: str, citation: Citation) -> bool:
+        """
+        Add one citation edge if the cited document is known.
+
+        Returns:
+            True if the citation was handled (edge added, or deliberately
+            skipped as a self-citation); False if it should be retried later.
+        """
+        cited_doc_id = self._resolve_citation(citation)
+
+        if not cited_doc_id:
+            # Distinguish "cannot ever resolve" from "not resolvable yet".
+            # A citation with no normalized form is malformed, so retrying is
+            # pointless; one that simply has no matching document yet must be
+            # retried once more documents arrive, which is the whole point of
+            # the pending list.
+            return not citation.normalized_cite
+
+        if cited_doc_id == citing_doc_id:
+            # Opinions usually restate their own citation in the caption, which
+            # produced a self-loop that inflated the document's own PageRank and
+            # in/out-degree. A document citing itself conveys no authority.
+            return True
+
+        if cited_doc_id not in self.documents:
+            return False
+
+        if not self.graph.has_edge(citing_doc_id, cited_doc_id):
+            self.graph.add_edge(citing_doc_id, cited_doc_id)
+            self.documents[citing_doc_id].cited_docs.append(cited_doc_id)
+            self.documents[cited_doc_id].citing_docs.append(citing_doc_id)
+
+        return True
+
+    def _resolve_pending_citations(self) -> int:
+        """
+        Retry deferred citations now that more documents are known.
+
+        Returns:
+            Number of citations resolved by this pass.
+        """
+        if not self._pending_citations:
+            return 0
+
+        still_pending = []
+        resolved = 0
+        for citing_doc_id, citation in self._pending_citations:
+            if self._add_citation_edge(citing_doc_id, citation):
+                resolved += 1
+            else:
+                still_pending.append((citing_doc_id, citation))
+
+        self._pending_citations = still_pending
+        return resolved
+
+    def _refresh_degrees(self) -> None:
+        """
+        Recompute in/out degree for every node.
+
+        Edges can now be added to documents that were inserted earlier, so it is
+        not enough to set the degrees of the document being added - the cited
+        document's in_degree used to be left stale and was saved that way to
+        documents.json.
+        """
+        for node_id, node in self.documents.items():
+            node.out_degree = self.graph.out_degree(node_id)
+            node.in_degree = self.graph.in_degree(node_id)
 
     def _resolve_citation(self, citation: Citation) -> Optional[str]:
         """
@@ -433,9 +564,22 @@ class CitationGraph:
         if not citation.normalized_cite:
             return None
 
-        # Search for matching document
+        target = _canonical_cite(citation.normalized_cite)
+        if not target:
+            return None
+
+        # Search for matching document. Both sides are canonicalised first.
+        #
+        # Citation.normalized_cite is built as "{volume}-{reporter}-{page}", e.g.
+        # "457-U.S.-800", while documents are registered with the citation as it
+        # appears in the source, e.g. "457 U.S. 800" - which is the form
+        # DocumentNode.citation documents and that the corpus builders pass. The
+        # previous exact string comparison therefore matched almost nothing, so
+        # the graph held virtually no case edges at all, PageRank was near
+        # uniform, and the authority component of hybrid ranking carried no
+        # information. Comparing canonical keys makes the two spellings meet.
         for doc_id, doc in self.documents.items():
-            if doc.citation == citation.normalized_cite:
+            if doc.citation and _canonical_cite(doc.citation) == target:
                 return doc_id
 
         return None
@@ -466,6 +610,10 @@ class CitationGraph:
         Returns:
             Dictionary of doc_id -> pagerank score
         """
+
+        # Final pass: documents added after their citers can now be linked.
+        self._resolve_pending_citations()
+        self._refresh_degrees()
         if not self.graph.nodes():
             return {}
 
@@ -539,7 +687,18 @@ class CitationGraph:
         if not self.pagerank_scores:
             self.compute_pagerank()
 
-        score = self.pagerank_scores.get(doc_id, 0.0)
+        # A document outside the graph has no authority information; it must be
+        # treated as neutral. Previously it fell back to 0.0 and was then
+        # min-max normalized against PageRank scores whose minimum is always
+        # above zero (PageRank gives every node at least (1-d)/N), producing a
+        # NEGATIVE score. HybridRanker's 0.7*relevance + 0.3*authority then
+        # ranked such a passage below the least authoritative passage in the
+        # graph - a penalty no document had earned - and could push genuinely
+        # relevant evidence out of top_k.
+        if doc_id not in self.pagerank_scores:
+            return 0.0
+
+        score = self.pagerank_scores[doc_id]
 
         # Normalize to 0-1 range
         if self.pagerank_scores:
@@ -548,8 +707,12 @@ class CitationGraph:
 
             if max_score > min_score:
                 score = (score - min_score) / (max_score - min_score)
+            else:
+                # Every node is equally authoritative; say so rather than 0.
+                score = 1.0 if score > 0 else 0.0
 
-        return score
+        # Defensive clamp: the contract is a 0-1 score.
+        return max(0.0, min(1.0, score))
 
     def get_authority_tier(self, doc_id: str) -> str:
         """

@@ -88,11 +88,27 @@ class DocumentRetriever:
                 self.corpus = data.get("documents", [])
                 self.corpus_metadata = data.get("metadata", [])
 
-        # Load BM25 index
+        # Load BM25 index, rebuilding it when the pickle is absent.
+        #
+        # bm25.pkl is written by build_index but was never shipped with the
+        # index, so on a fresh checkout self.bm25 stayed None and the first
+        # query died in hybrid_search with
+        # "'NoneType' object has no attribute 'get_scores'". Rebuilding from the
+        # committed corpus.json takes a few seconds and uses exactly the
+        # tokenization build_index uses (doc.lower().split()), so scores are
+        # identical to a loaded pickle. It also avoids depending on a pickle,
+        # which is fragile across library versions and unpleasant to trust from
+        # a repository.
         bm25_path = self.index_path / "bm25.pkl"
         if bm25_path.exists():
             with open(bm25_path, "rb") as f:
                 self.bm25 = pickle.load(f)
+        elif self.corpus:
+            print(
+                f"  bm25.pkl absent; rebuilding BM25 over {len(self.corpus)} "
+                f"passages from corpus.json"
+            )
+            self.bm25 = BM25Okapi([doc.lower().split() for doc in self.corpus])
 
         # Load dense embeddings
         embeddings_path = self.index_path / "dense_embeddings.npy"
